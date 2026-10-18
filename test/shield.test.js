@@ -5,6 +5,8 @@ import { AuditLog, ShieldAccessError, ShieldCryptoError, createShield, generateK
 const K1 = generateKey();
 const K2 = generateKey();
 const IDX = generateKey();
+// 本番と同じく「環境変数から読み込んだ鍵」として扱う（ルール1の警告を出さないため）
+Object.assign(process.env, { PII_TEST_KEY_V1: K1, PII_TEST_KEY_V2: K2, PII_TEST_INDEX_KEY: IDX });
 
 const schema = {
   email: { index: 'email', mask: 'email' },
@@ -54,7 +56,7 @@ test('暗号文を書き換えると検知される', () => {
 
 test('鍵が違えば復号できない（DBだけ盗まれたケース）', () => {
   const stored = makeShield().protect(user);
-  const attacker = createShield({ keys: { 1: generateKey() }, activeKeyVersion: 1, indexKey: generateKey(), schema });
+  const attacker = createShield({ keys: { 1: generateKey() }, activeKeyVersion: 1, indexKey: generateKey(), schema, keySource: 'kms' });
   assert.throws(() => attacker.reveal(stored, { actor: 'u1' }), ShieldCryptoError);
 });
 
