@@ -1,0 +1,22 @@
+{
+  "name": "pii-shield",
+  "version": "0.1.0",
+  "description": "アプリに保存する個人情報を、DBが盗まれても読めない形で守るための組み込み用モジュール（依存ライブラリなし）",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "bin": {
+    "pii-shield-keygen": "bin/keygen.js"
+  },
+  "scripts": {
+    "test": "node --test",
+    "demo": "node examples/demo.js",
+    "keygen": "node bin/keygen.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}
