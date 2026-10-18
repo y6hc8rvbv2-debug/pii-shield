@@ -23,7 +23,7 @@ export class ShieldCryptoError extends Error {
 export function decodeKey(key, label) {
   const buf = Buffer.isBuffer(key) ? key : Buffer.from(String(key ?? ''), 'base64');
   if (buf.length !== 32) {
-    throw new Error(`${label} は 32 バイト（base64 で 44 文字）の鍵が必要です。npm run keygen で生成してください`);
+    throw new Error(`${label} は 32 バイト（base64 で 44 文字）の鍵が必要です。npx pii-shield keygen で生成してください`);
   }
   return buf;
 }

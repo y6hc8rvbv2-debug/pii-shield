@@ -17,7 +17,41 @@
 | 一覧画面やAPI応答から情報が漏れる | **マスキング**（`t***@example.com` など）。表示用の値は復号せずに出せる |
 | パスワードの漏洩 | **scrypt**によるハッシュ化（元に戻せない） |
 
-## 使い方
+## 新しいアプリに組み込む（いちばん簡単な方法）
+
+アプリのフォルダで、次のコマンドを1つ実行するだけです。
+
+```bash
+npx github:y6hc8rvbv2-debug/pii-shield init
+```
+
+これで次のものが自動で用意されます（既にあるファイルは上書きしません）。
+
+| 作られるもの | 役割 |
+|---|---|
+| `lib/pii-shield.js` | 設定済みの `shield`。サーバー側のコードで `import { shield } from './lib/pii-shield.js'` と読み込むだけで使える |
+| `.env` | 新しく作った暗号鍵（`PII_KEY_V1` / `PII_INDEX_KEY`） |
+| `.env.example` | 鍵の項目名だけを書いた見本（Git に入れてよい） |
+| `.gitignore` | `.env` を Git に入れない設定 |
+| `.github/workflows/pii-shield-check.yml` | GitHub に上げるたびに違反がないか自動チェック |
+| `CLAUDE.md` | Claude がこのアプリを作業するときに守るルール（個人情報は必ず shield を通す、など） |
+| `package.json` | PII Shield 本体と、`npm run check:pii` コマンドを追加 |
+
+> ⚠ セットアップ後、`.env` の2つの鍵を **本番サーバー（Vercel など）の環境変数** にも登録してください。
+> 鍵をなくすと暗号化したデータは二度と読めないため、`.env` の中身は安全な場所（パスワード管理アプリなど）にも控えてください。
+
+### Claude にアプリを作ってもらう場合
+
+claude.ai の設定にある「個人設定（Personal preferences）」に次の文を追加しておくと、
+Claude が新しいアプリを作るたびに自動で PII Shield を組み込みます。
+
+```
+新しいアプリやWebサービスを作るときは、個人情報保護モジュール PII Shield を必ず組み込んでください。
+最初にアプリのフォルダで「npx github:y6hc8rvbv2-debug/pii-shield init」を実行し、
+作成された CLAUDE.md の「個人情報の扱い」のルールに従ってコードを書いてください。
+```
+
+## 使い方（手動で組み込む場合）
 
 ### 1. 鍵を作る
 
@@ -165,6 +199,7 @@ npx pii-shield-check ./my-app --strict # 「注意」でも終了コード 1
 npm run demo   # 記事のような攻撃を再現して、防げる様子を表示
 npm test       # 自動テスト（29項目）
 npm run check  # 「必ず守ってほしいこと」のチェック
+node bin/pii-shield.js init ../my-app --no-install  # 別フォルダのアプリにセットアップ（動作確認用）
 ```
 
 ## 用語の補足（初心者向け）
