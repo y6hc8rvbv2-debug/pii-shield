@@ -5,10 +5,13 @@ import { createShield, generateKey } from '../src/index.js';
 const line = (title) => console.log(`\n=== ${title} ===`);
 
 // 本番では鍵は環境変数や鍵管理サービスから読み込む（コードやスマホアプリに埋め込まない）
+// デモでは未設定なら一時的な鍵を作り、環境変数に入れた状態を再現する
+process.env.PII_KEY_V1 ??= generateKey();
+process.env.PII_INDEX_KEY ??= generateKey();
 const shield = createShield({
-  keys: { 1: process.env.PII_KEY_V1 ?? generateKey() },
+  keys: { 1: process.env.PII_KEY_V1 },
   activeKeyVersion: 1,
-  indexKey: process.env.PII_INDEX_KEY ?? generateKey(),
+  indexKey: process.env.PII_INDEX_KEY,
   schema: {
     email: { index: 'email', mask: 'email' },
     phone: { mask: 'phone' },

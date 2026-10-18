@@ -5,10 +5,12 @@ import { blindIndex, decodeKey, decryptValue, encryptValue, isEncrypted, tokenVe
 import { AccessGuard, ShieldAccessError } from './guard.js';
 import { applyMask } from './mask.js';
 import { hashPassword, verifyPassword } from './password.js';
+import { ShieldSecurityError, checkKeyHandling, defaultWarningHandler, detectClientRuntime } from './safety.js';
 
 export { AuditLog, AccessGuard, ShieldAccessError, hashPassword, verifyPassword };
 export { ShieldCryptoError } from './crypto.js';
 export { maskers } from './mask.js';
+export { ShieldSecurityError };
 
 const normalizers = {
   email: (v) => String(v).trim().toLowerCase(),
@@ -36,10 +38,23 @@ function defaultPolicy({ actor, ownerId, roles = [], purpose }) {
  * @param {Function} [options.policy]                    誰がどのデータを見てよいかの判定関数
  * @param {object} [options.guard]                       AccessGuard の設定
  * @param {object} [options.audit]                       AuditLog の設定
+ * @param {'env'|'kms'} [options.keySource]              鍵の取得元。鍵管理サービスから取得している場合は 'kms'
+ * @param {Function} [options.onSecurityWarning]         「必ず守ってほしいこと」違反時の通知先（既定: console.warn）
+ * @param {boolean} [options.strictSecurity]             true なら違反時に警告ではなくエラーで起動を止める
  */
 export function createShield(options) {
   const { schema, activeKeyVersion, policy = defaultPolicy } = options;
   if (!schema || Object.keys(schema).length === 0) throw new Error('schema に守りたい項目を指定してください');
+
+  // ルール1違反（画面側・スマホアプリ内での利用）は鍵が丸見えになるため、警告ではなく必ず止める
+  const clientRuntime = detectClientRuntime();
+  if (clientRuntime) {
+    throw new ShieldSecurityError([{
+      rule: 1,
+      code: 'CLIENT_SIDE_RUNTIME',
+      message: `PII Shield が${clientRuntime}の中で動いています。アプリや画面側のコードは解析されるため、鍵が攻撃者に見えてしまいます。PII Shield は必ずサーバー側で使ってください。`,
+    }]);
+  }
 
   const keys = new Map(Object.entries(options.keys ?? {}).map(([v, k]) => [Number(v), decodeKey(k, `keys[${v}]`)]));
   const activeKey = keys.get(activeKeyVersion);
@@ -47,6 +62,19 @@ export function createShield(options) {
   const indexKey = decodeKey(options.indexKey, 'indexKey');
   if ([...keys.values()].some((k) => k.equals(indexKey))) {
     throw new Error('indexKey は暗号鍵と別の鍵にしてください');
+  }
+
+  // ルール1・2の違反がないか確認して警告する
+  const securityWarnings = checkKeyHandling({
+    keys: [
+      ...Object.entries(options.keys ?? {}).map(([v, value]) => ({ label: `keys[${v}]`, value })),
+      { label: 'indexKey', value: options.indexKey },
+    ],
+    keySource: options.keySource,
+  });
+  if (securityWarnings.length > 0) {
+    if (options.strictSecurity) throw new ShieldSecurityError(securityWarnings);
+    securityWarnings.forEach(options.onSecurityWarning ?? defaultWarningHandler);
   }
 
   const guard = options.guard instanceof AccessGuard ? options.guard : new AccessGuard(options.guard);
@@ -151,5 +179,5 @@ export function createShield(options) {
     return out;
   }
 
-  return { protect, reveal, toPublic, indexOf, needsRotation, rotate, guard, audit, hashPassword, verifyPassword };
+  return { protect, reveal, toPublic, indexOf, needsRotation, rotate, guard, audit, securityWarnings, hashPassword, verifyPassword };
 }

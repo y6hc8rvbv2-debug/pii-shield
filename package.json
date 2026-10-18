@@ -8,12 +8,14 @@
     ".": "./src/index.js"
   },
   "bin": {
-    "pii-shield-keygen": "bin/keygen.js"
+    "pii-shield-keygen": "bin/keygen.js",
+    "pii-shield-check": "bin/check.js"
   },
   "scripts": {
     "test": "node --test",
     "demo": "node examples/demo.js",
-    "keygen": "node bin/keygen.js"
+    "keygen": "node bin/keygen.js",
+    "check": "node bin/check.js"
   },
   "engines": {
     "node": ">=18"
